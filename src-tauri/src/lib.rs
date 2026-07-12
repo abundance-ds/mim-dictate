@@ -20,7 +20,7 @@ use tauri_plugin_positioner::{Position, WindowExt};
 
 use state::AppState;
 
-const TRAY_ID: &str = "mim-tts-tray";
+const TRAY_ID: &str = "mim-dictate-tray";
 #[cfg(target_os = "macos")]
 const DEFAULT_SHORTCUT: &str = "Option";
 #[cfg(not(target_os = "macos"))]
@@ -120,7 +120,7 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
         })?;
 
     let mut builder = TrayIconBuilder::with_id(TRAY_ID)
-        .tooltip("Mim TTS")
+        .tooltip("Mim Dictate")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .icon_as_template(true)
@@ -190,9 +190,9 @@ pub(crate) fn set_tray_busy(app: &tauri::AppHandle, busy: bool) {
         let title = if busy { Some("REC") } else { None };
         let _ = tray.set_title(title);
         let _ = tray.set_tooltip(Some(if busy {
-            "Mim TTS is recording"
+            "Mim Dictate is recording"
         } else {
-            "Mim TTS"
+            "Mim Dictate"
         }));
     }
 }

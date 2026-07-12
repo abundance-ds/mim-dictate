@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    mim_tts_lib::run()
+    mim_dictate_lib::run()
 }

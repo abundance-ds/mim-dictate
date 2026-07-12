@@ -22,7 +22,7 @@ jobs:
           gh api "repos/$REPO/releases" --jq ".[] | select(.tag_name == \"$TAG\" and .draft) | .id" | while read -r id; do
             gh api "repos/$REPO/releases/$id" --method DELETE
           done
-          gh release create "$TAG" --repo "$REPO" --draft --title "Mim TTS $TAG" --notes "Download the installer for your platform below."
+          gh release create "$TAG" --repo "$REPO" --draft --title "Mim Dictate $TAG" --notes "Download the installer for your platform below."
 
   build:
     needs: create-release

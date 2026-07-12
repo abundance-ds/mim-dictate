@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
   <key>NSMicrophoneUsageDescription</key>
-  <string>Mim TTS records your microphone only while you start dictation, then transcribes the audio locally on this Mac.</string>
+  <string>Mim Dictate records your microphone only while you start dictation, then transcribes the audio locally on this Mac.</string>
 </dict>
 </plist>

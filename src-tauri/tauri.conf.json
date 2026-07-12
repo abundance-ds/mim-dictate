@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Mim TTS",
+  "productName": "Mim Dictate",
   "version": "0.1.2",
   "identifier": "ai.shoulders.mimtts",
   "build": {
@@ -12,7 +12,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Mim TTS",
+        "title": "Mim Dictate",
         "width": 320,
         "height": 460,
         "decorations": false,

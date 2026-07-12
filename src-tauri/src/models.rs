@@ -171,7 +171,7 @@ mod tests {
 
     #[test]
     fn model_path_accepts_known_model_ids_only() {
-        let root = Path::new("/tmp/mim-tts-test");
+        let root = Path::new("/tmp/mim-dictate-test");
         assert_eq!(
             model_path(root, "tiny").unwrap(),
             root.join("models").join("ggml-tiny.bin")

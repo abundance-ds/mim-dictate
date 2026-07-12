@@ -388,7 +388,7 @@ async function grantAccessibilityPermission() {
       return;
     }
 
-    setStatus("idle", "Enable Mim TTS in Accessibility");
+    setStatus("idle", "Enable Mim Dictate in Accessibility");
     pollAccessibilityPermission(10, 1000);
 
     setTimeout(async () => {
@@ -878,7 +878,7 @@ function updateDetail() {
 
 function statusTitle(message) {
   const t = String(message || "Ready");
-  if (t === "Ready" || t === "Done") return "Mim TTS";
+  if (t === "Ready" || t === "Done") return "Mim Dictate";
   if (t.startsWith("Pasted")) return "Pasted";
   if (t.startsWith("Copied")) return "Copied";
   if (t.includes("Accessibility permission")) return "Copied";

@@ -17,9 +17,14 @@ pub struct AppState {
 
 impl AppState {
     pub fn new() -> anyhow::Result<Self> {
-        let app_dir = dirs::data_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join("mim-tts");
+        let data_root = dirs::data_dir().unwrap_or_else(|| PathBuf::from("."));
+        // The app was previously named Mim TTS; adopt an existing mim-tts dir
+        // so users keep their models, settings, and history.
+        let mut app_dir = data_root.join("mim-dictate");
+        let legacy_dir = data_root.join("mim-tts");
+        if !app_dir.exists() && legacy_dir.exists() && fs::rename(&legacy_dir, &app_dir).is_err() {
+            app_dir = legacy_dir;
+        }
         fs::create_dir_all(app_dir.join("models"))?;
 
         let settings_path = app_dir.join("settings.json");
