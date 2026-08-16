@@ -41,7 +41,8 @@
     "category": "Utility",
     "macOS": {
       "minimumSystemVersion": "11.0",
-      "entitlements": "Entitlements.plist"
+      "entitlements": "Entitlements.plist",
+      "signingIdentity": "Developer ID Application: Paul Schneider (7WJ3GS2MUC)"
     },
     "windows": {
     }
