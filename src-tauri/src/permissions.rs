@@ -50,6 +50,14 @@ pub fn request_accessibility() -> PermissionStatus {
 }
 
 #[cfg(target_os = "macos")]
+pub fn request_input_monitoring() -> PermissionStatus {
+    unsafe {
+        mim_request_input_monitoring_permission();
+    }
+    check()
+}
+
+#[cfg(target_os = "macos")]
 pub fn request_keyboard() -> PermissionStatus {
     unsafe {
         mim_request_accessibility_permission();
@@ -89,6 +97,11 @@ pub fn request_mic() {}
 
 #[cfg(not(target_os = "macos"))]
 pub fn request_accessibility() -> PermissionStatus {
+    check()
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn request_input_monitoring() -> PermissionStatus {
     check()
 }
 

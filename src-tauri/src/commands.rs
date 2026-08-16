@@ -314,6 +314,7 @@ async fn stop_recording_impl(app: AppHandle) -> CommandResult<StopResult> {
     let state = app.state::<AppState>();
     let mut tray_recording = RecordingTrayGuard::new(app.clone());
     crate::system_audio::restore();
+    let paste_target_pid = paste::frontmost_app_pid();
 
     let capture = {
         let mut recorder = state
@@ -350,6 +351,7 @@ async fn stop_recording_impl(app: AppHandle) -> CommandResult<StopResult> {
     let languages = settings.languages.clone();
 
     let transcript = tauri::async_runtime::spawn_blocking(move || {
+        let _activity = crate::activity::ActivityGuard::begin("Transcribing dictation");
         let mut transcriber = transcriber
             .lock()
             .map_err(|_| anyhow::anyhow!("transcriber lock poisoned"))?;
@@ -370,7 +372,7 @@ async fn stop_recording_impl(app: AppHandle) -> CommandResult<StopResult> {
     }
 
     let paste = if settings.auto_paste {
-        Some(paste::paste_text(&app, &transcript.text).map_err(to_command_error)?)
+        Some(paste::paste_text(&app, &transcript.text, paste_target_pid).map_err(to_command_error)?)
     } else {
         None
     };
@@ -481,6 +483,16 @@ pub fn request_accessibility_permission() -> CommandResult<crate::permissions::P
 #[tauri::command]
 pub fn request_keyboard_permission() -> CommandResult<crate::permissions::PermissionStatus> {
     Ok(crate::permissions::request_keyboard())
+}
+
+#[tauri::command]
+pub fn request_input_monitoring_permission() -> CommandResult<crate::permissions::PermissionStatus> {
+    Ok(crate::permissions::request_input_monitoring())
+}
+
+#[tauri::command]
+pub fn restart_app(app: AppHandle) {
+    app.restart();
 }
 
 #[tauri::command]

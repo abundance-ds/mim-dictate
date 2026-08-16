@@ -1,3 +1,4 @@
+mod activity;
 mod audio;
 mod commands;
 mod db;
@@ -101,6 +102,8 @@ pub fn run() {
             commands::request_mic_permission,
             commands::request_accessibility_permission,
             commands::request_keyboard_permission,
+            commands::request_input_monitoring_permission,
+            commands::restart_app,
             commands::open_permission_settings,
         ])
         .run(tauri::generate_context!())

@@ -16,10 +16,24 @@ pub struct PasteOutcome {
     pub message: String,
 }
 
-pub fn paste_text(app: &AppHandle, text: &str) -> anyhow::Result<PasteOutcome> {
+pub fn paste_text(
+    app: &AppHandle,
+    text: &str,
+    target_pid: Option<i32>,
+) -> anyhow::Result<PasteOutcome> {
     let clipboard = app.clipboard();
     let original_text = clipboard.read_text().ok();
     clipboard.write_text(text.to_string())?;
+
+    if let (Some(target), Some(current)) = (target_pid, frontmost_app_pid()) {
+        if current != target {
+            return Ok(PasteOutcome {
+                pasted: false,
+                restored_text_clipboard: false,
+                message: "Focus changed. Copied - paste with Cmd+V.".to_string(),
+            });
+        }
+    }
 
     let paste_result = simulate_cmd_v();
     if let Err(error) = paste_result {
@@ -46,6 +60,20 @@ pub fn paste_text(app: &AppHandle, text: &str) -> anyhow::Result<PasteOutcome> {
             message: "Pasted".to_string(),
         })
     }
+}
+
+#[cfg(target_os = "macos")]
+pub fn frontmost_app_pid() -> Option<i32> {
+    use objc2_app_kit::NSWorkspace;
+
+    NSWorkspace::sharedWorkspace()
+        .frontmostApplication()
+        .map(|app| app.processIdentifier())
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn frontmost_app_pid() -> Option<i32> {
+    None
 }
 
 fn simulate_cmd_v() -> anyhow::Result<()> {
