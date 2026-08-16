@@ -100,10 +100,7 @@ fn run_once(
     language: Option<&str>,
 ) -> anyhow::Result<RunResult> {
     let mut state = context.create_state()?;
-    let mut params = FullParams::new(SamplingStrategy::BeamSearch {
-        beam_size: 5,
-        patience: -1.0,
-    });
+    let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
 
     let thread_count = std::thread::available_parallelism()
         .map(|count| count.get().min(4) as i32)
