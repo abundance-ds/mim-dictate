@@ -48,13 +48,22 @@
             <span id="setup-mic-badge" class="setup-badge">Needed</span>
           </button>
 
-          <button id="setup-keyboard" class="setup-task" type="button">
+          <button id="setup-accessibility" class="setup-task" type="button">
             <span class="setup-index">3</span>
             <span class="setup-copy">
-              <span class="setup-task-title">Enable keyboard access</span>
-              <span id="setup-keyboard-detail" class="setup-task-detail">Required for Option and paste</span>
+              <span class="setup-task-title">Allow paste · Accessibility</span>
+              <span id="setup-accessibility-detail" class="setup-task-detail">Lets Mim paste into the active app</span>
             </span>
-            <span id="setup-keyboard-badge" class="setup-badge">Needed</span>
+            <span id="setup-accessibility-badge" class="setup-badge">Needed</span>
+          </button>
+
+          <button id="setup-input" class="setup-task" type="button">
+            <span class="setup-index">4</span>
+            <span class="setup-copy">
+              <span class="setup-task-title">Allow hotkey · Input Monitoring</span>
+              <span id="setup-input-detail" class="setup-task-detail">Lets Mim hear the hotkey</span>
+            </span>
+            <span id="setup-input-badge" class="setup-badge">Needed</span>
           </button>
         </div>
 
@@ -132,7 +141,11 @@
             <span class="perm-badge">Grant</span>
           </button>
           <button id="perm-acc" class="setting-row setting-perm" type="button">
-            <span class="setting-label">Keyboard access</span>
+            <span class="setting-label">Paste access</span>
+            <span class="perm-badge">Request</span>
+          </button>
+          <button id="perm-input" class="setting-row setting-perm" type="button">
+            <span class="setting-label">Hotkey access</span>
             <span class="perm-badge">Request</span>
           </button>
 

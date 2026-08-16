@@ -26,13 +26,13 @@ const state = {
   settingsOpen: false,
   setupActive: false,
   setupBusyTask: null,
+  inputPaneOpened: false,
 };
 
 const el = {};
 let capturingHotkey = false;
 let captureTimer = null;
-let accessibilityRequestInFlight = false;
-let accessibilityPollTimer = null;
+let permissionPollTimer = null;
 
 window.addEventListener("DOMContentLoaded", async () => {
   el.panel = document.querySelector(".panel");
@@ -55,10 +55,15 @@ window.addEventListener("DOMContentLoaded", async () => {
       detail: document.querySelector("#setup-mic-detail"),
       badge: document.querySelector("#setup-mic-badge"),
     },
-    keyboard: {
-      row: document.querySelector("#setup-keyboard"),
-      detail: document.querySelector("#setup-keyboard-detail"),
-      badge: document.querySelector("#setup-keyboard-badge"),
+    accessibility: {
+      row: document.querySelector("#setup-accessibility"),
+      detail: document.querySelector("#setup-accessibility-detail"),
+      badge: document.querySelector("#setup-accessibility-badge"),
+    },
+    input: {
+      row: document.querySelector("#setup-input"),
+      detail: document.querySelector("#setup-input-detail"),
+      badge: document.querySelector("#setup-input-badge"),
     },
   };
   el.settingsSection = document.querySelector("#settings-section");
@@ -98,7 +103,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   el.setupContinue.addEventListener("click", runNextSetupTask);
   el.setupTasks.model.row.addEventListener("click", () => runSetupTask("model"));
   el.setupTasks.microphone.row.addEventListener("click", () => runSetupTask("microphone"));
-  el.setupTasks.keyboard.row.addEventListener("click", () => runSetupTask("keyboard"));
+  el.setupTasks.accessibility.row.addEventListener("click", () => runSetupTask("accessibility"));
+  el.setupTasks.input.row.addEventListener("click", () => runSetupTask("input"));
   el.modelDownloadButton.addEventListener("click", downloadSelectedModel);
   el.modelButton.addEventListener("click", (e) => { e.stopPropagation(); const open = !state.modelOpen; closeAllDropdowns(); if (open) setModelMenuOpen(true); });
   el.languageButton.addEventListener("click", (e) => { e.stopPropagation(); const open = !state.languageOpen; closeAllDropdowns(); if (open) setLanguageMenuOpen(true); });
@@ -110,6 +116,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   el.muteToggle.addEventListener("click", toggleMuteDuringRecording);
   document.getElementById("perm-mic")?.addEventListener("click", grantMicPermission);
   document.getElementById("perm-acc")?.addEventListener("click", grantAccessibilityPermission);
+  document.getElementById("perm-input")?.addEventListener("click", grantInputMonitoringPermission);
 
   window.addEventListener("keydown", handleKeydown);
   window.addEventListener("click", closeDropdowns);
@@ -198,7 +205,8 @@ function setupTasks() {
   const modelDone = Boolean(selected?.installed);
   const micStatus = state.permissions?.microphone || "not_determined";
   const micDone = micStatus === "authorized";
-  const keyboardDone = keyboardAccessGranted();
+  const accessibilityDone = Boolean(state.permissions?.accessibility);
+  const inputDone = Boolean(state.permissions?.input_monitoring);
   const hotkey = formatHotkey(state.settings?.hotkey || defaultHotkey);
 
   return [
@@ -219,19 +227,24 @@ function setupTasks() {
       badge: micDone ? "Done" : micStatus === "denied" || micStatus === "restricted" ? "Open" : "Allow",
     },
     {
-      id: "keyboard",
-      done: keyboardDone,
-      busy: accessibilityRequestInFlight || state.setupBusyTask === "keyboard",
-      detail: keyboardDone ? `${hotkey} is ready` : keyboardSetupDetail(hotkey),
-      badge: keyboardDone ? "Done" : accessibilityRequestInFlight ? "Waiting" : "Enable",
+      id: "accessibility",
+      done: accessibilityDone,
+      busy: state.setupBusyTask === "accessibility",
+      detail: accessibilityDone ? "Paste is ready" : "Lets Mim paste into the active app",
+      badge: accessibilityDone ? "Done" : "Enable",
+    },
+    {
+      id: "input",
+      done: inputDone,
+      busy: state.setupBusyTask === "input",
+      detail: inputDone
+        ? `${hotkey} is ready`
+        : state.inputPaneOpened
+          ? "Enabled it? Restart Mim to finish"
+          : `Lets Mim hear ${hotkey}`,
+      badge: inputDone ? "Done" : state.inputPaneOpened ? "Restart" : "Enable",
     },
   ];
-}
-
-function keyboardSetupDetail(hotkey) {
-  if (!state.permissions?.accessibility) return `Required for paste and ${hotkey}`;
-  if (!state.permissions?.input_monitoring) return `Required to hear ${hotkey}`;
-  return `Required for ${hotkey} and paste`;
 }
 
 function firstIncompleteSetupTask() {
@@ -288,14 +301,15 @@ function updateSetupUI() {
 }
 
 async function refreshPermissionsForAttention() {
-  if (state.recording || accessibilityRequestInFlight) return;
+  if (state.recording) return;
   await checkPermissions();
 }
 
 function setupActionLabel(task) {
   if (task === "model") return "Download model";
   if (task === "microphone") return "Allow microphone";
-  if (task === "keyboard") return "Enable keyboard access";
+  if (task === "accessibility") return "Allow paste access";
+  if (task === "input") return state.inputPaneOpened ? "Restart Mim" : "Allow hotkey access";
   return "Continue";
 }
 
@@ -317,8 +331,10 @@ async function runSetupTask(task) {
     } else if (task === "microphone") {
       await grantMicPermission();
       setTimeout(checkPermissions, 1000);
-    } else if (task === "keyboard") {
+    } else if (task === "accessibility") {
       await grantAccessibilityPermission();
+    } else if (task === "input") {
+      await grantInputMonitoringPermission();
     }
   } finally {
     state.setupBusyTask = null;
@@ -354,11 +370,17 @@ function updatePermissionUI(perms) {
     if (b) b.textContent = ok ? "Granted" : perms.microphone === "not_determined" ? "Grant" : "Open Settings";
   }
   if (accRow) {
-    const ok = keyboardAccessGranted();
+    const ok = Boolean(perms.accessibility);
     accRow.dataset.status = ok ? "granted" : "needed";
-    accRow.disabled = accessibilityRequestInFlight && !ok;
     const b = accRow.querySelector(".perm-badge");
-    if (b) b.textContent = ok ? "Granted" : accessibilityRequestInFlight ? "Requesting" : "Request";
+    if (b) b.textContent = ok ? "Granted" : "Request";
+  }
+  const inputRow = document.getElementById("perm-input");
+  if (inputRow) {
+    const ok = Boolean(perms.input_monitoring);
+    inputRow.dataset.status = ok ? "granted" : "needed";
+    const b = inputRow.querySelector(".perm-badge");
+    if (b) b.textContent = ok ? "Granted" : state.inputPaneOpened ? "Restart" : "Request";
   }
 }
 
@@ -373,43 +395,65 @@ async function grantMicPermission() {
 }
 
 async function grantAccessibilityPermission() {
-  if (accessibilityRequestInFlight) return;
+  if (state.permissions?.accessibility) return;
 
-  accessibilityRequestInFlight = true;
-  updatePermissionUI(state.permissions || { microphone: "authorized", accessibility: false, input_monitoring: false });
-  setStatus("idle", "Requesting keyboard access");
-
+  setStatus("idle", "Enable Mim Dictate in Accessibility");
   try {
-    const perms = await invoke("request_keyboard_permission");
-    applyPermissionState(perms);
-
-    if (perms?.accessibility && perms?.input_monitoring) {
-      finishAccessibilityRequest("Keyboard access granted");
+    applyPermissionState(await invoke("request_accessibility_permission"));
+    if (state.permissions?.accessibility) {
+      setStatus("done", "Paste access granted");
+      setTimeout(() => setStatus("idle", idleStatusMessage()), 900);
       return;
     }
 
-    setStatus("idle", "Enable Mim Dictate in Accessibility");
-    pollAccessibilityPermission(10, 1000);
-
+    // The one-time system prompt may be showing; give it a moment before
+    // falling back to opening the Settings pane directly.
     setTimeout(async () => {
       try {
         const latest = await invoke("check_permissions");
         applyPermissionState(latest);
         if (!latest.accessibility) {
           await invoke("open_permission_settings", { pane: "accessibility" });
-        } else if (!latest.input_monitoring) {
-          await invoke("open_permission_settings", { pane: "input_monitoring" });
         }
       } catch (_) {}
     }, 2500);
+    pollPermissions((perms) => perms.accessibility, 30, 1000, "Paste access granted");
   } catch (error) {
     setStatus("idle", String(error));
-  } finally {
-    setTimeout(() => {
-      accessibilityRequestInFlight = false;
-      updatePermissionUI(state.permissions || { microphone: "authorized", accessibility: false, input_monitoring: false });
-      updateSetupUI();
-    }, 3500);
+  }
+}
+
+async function grantInputMonitoringPermission() {
+  if (state.permissions?.input_monitoring) return;
+
+  if (state.inputPaneOpened) {
+    await invoke("restart_app");
+    return;
+  }
+
+  setStatus("idle", "Enable Mim Dictate in Input Monitoring");
+  try {
+    applyPermissionState(await invoke("request_input_monitoring_permission"));
+    if (state.permissions?.input_monitoring) {
+      setStatus("done", "Hotkey access granted");
+      setTimeout(() => setStatus("idle", idleStatusMessage()), 900);
+      return;
+    }
+
+    setTimeout(async () => {
+      try {
+        const latest = await invoke("check_permissions");
+        applyPermissionState(latest);
+        if (!latest.input_monitoring) {
+          state.inputPaneOpened = true;
+          await invoke("open_permission_settings", { pane: "input_monitoring" });
+          updateSetupUI();
+        }
+      } catch (_) {}
+    }, 2500);
+    pollPermissions((perms) => perms.input_monitoring, 30, 1000, "Hotkey access granted");
+  } catch (error) {
+    setStatus("idle", String(error));
   }
 }
 
@@ -434,37 +478,26 @@ function messageNeedsPermissionRefresh(message) {
   );
 }
 
-function pollAccessibilityPermission(attempts, delayMs) {
-  if (accessibilityPollTimer) clearTimeout(accessibilityPollTimer);
+function pollPermissions(predicate, attempts, delayMs, doneMessage) {
+  if (permissionPollTimer) clearTimeout(permissionPollTimer);
 
   const poll = async (remaining) => {
     try {
       const perms = await invoke("check_permissions");
       applyPermissionState(perms);
-      if (perms.accessibility && perms.input_monitoring) {
-        finishAccessibilityRequest("Keyboard access granted");
+      if (predicate(perms)) {
+        setStatus("done", doneMessage);
+        setTimeout(() => setStatus("idle", idleStatusMessage()), 900);
         return;
       }
     } catch (_) {}
 
     if (remaining > 0) {
-      accessibilityPollTimer = setTimeout(() => poll(remaining - 1), delayMs);
+      permissionPollTimer = setTimeout(() => poll(remaining - 1), delayMs);
     }
   };
 
-  accessibilityPollTimer = setTimeout(() => poll(attempts), delayMs);
-}
-
-function finishAccessibilityRequest(message) {
-  if (accessibilityPollTimer) {
-    clearTimeout(accessibilityPollTimer);
-    accessibilityPollTimer = null;
-  }
-  accessibilityRequestInFlight = false;
-  updatePermissionUI(state.permissions || { microphone: "authorized", accessibility: true, input_monitoring: true });
-  updateSetupUI();
-  setStatus("done", message);
-  setTimeout(() => setStatus("idle", idleStatusMessage()), 900);
+  permissionPollTimer = setTimeout(() => poll(attempts), delayMs);
 }
 
 // ── Recording ────────────────────────────────────────────────
