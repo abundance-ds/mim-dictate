@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Mim Dictate",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "identifier": "ai.shoulders.mimtts",
   "build": {
     "frontendDist": "../src"
@@ -44,7 +44,6 @@
       "entitlements": "Entitlements.plist",
       "signingIdentity": "Developer ID Application: Paul Schneider (7WJ3GS2MUC)"
     },
-    "windows": {
-    }
+    "windows": {}
   }
 }

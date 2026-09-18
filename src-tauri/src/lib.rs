@@ -4,6 +4,7 @@ mod commands;
 mod db;
 mod fn_hotkey;
 mod models;
+mod panel;
 mod paste;
 mod permissions;
 mod settings;
@@ -17,7 +18,6 @@ use tauri::{
     Manager,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
-use tauri_plugin_positioner::{Position, WindowExt};
 
 use state::AppState;
 
@@ -43,7 +43,6 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .plugin(tauri_plugin_positioner::init())
         .setup(|app| {
             let state = AppState::new()?;
             app.manage(state);
@@ -64,15 +63,20 @@ pub fn run() {
 
             if let Some(window) = app.get_webview_window("main") {
                 let w = window.clone();
-                window.on_window_event(move |event| {
-                    if let tauri::WindowEvent::Focused(false) = event {
+                window.on_window_event(move |event| match event {
+                    tauri::WindowEvent::Focused(false) => {
                         let _ = w.hide();
                     }
+                    tauri::WindowEvent::CloseRequested { api, .. } => {
+                        api.prevent_close();
+                        let _ = w.hide();
+                    }
+                    _ => {}
                 });
             }
 
             if should_show_panel_on_start(app) {
-                toggle_panel(app.handle());
+                panel::show(app.handle());
             }
             Ok(())
         })
@@ -106,8 +110,25 @@ pub fn run() {
             commands::restart_app,
             commands::open_permission_settings,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| match event {
+            #[cfg(target_os = "macos")]
+            tauri::RunEvent::Reopen { .. } => panel::show(app),
+            tauri::RunEvent::Exit => {
+                system_audio::restore();
+                if let Some(state) = app.try_state::<AppState>() {
+                    // AppHandle clones can outlive the event loop. Explicitly free
+                    // Whisper before ggml's global Metal device is destroyed.
+                    state
+                        .transcriber
+                        .lock()
+                        .unwrap_or_else(|poisoned| poisoned.into_inner())
+                        .shutdown();
+                }
+            }
+            _ => {}
+        });
 }
 
 fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
@@ -128,12 +149,11 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .icon_as_template(true)
         .on_menu_event(|app, event| match event.id().as_ref() {
-            "show" => toggle_panel(app),
+            "show" => panel::show(app),
             "quit" => app.exit(0),
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
-            tauri_plugin_positioner::on_tray_event(tray.app_handle(), &event);
             if matches!(
                 event,
                 TrayIconEvent::Click {
@@ -142,7 +162,7 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
                     ..
                 }
             ) {
-                toggle_panel(tray.app_handle());
+                panel::toggle(tray.app_handle());
             }
         });
 
@@ -169,23 +189,6 @@ fn should_show_panel_on_start(app: &tauri::App) -> bool {
         || permissions.microphone != "authorized"
         || !permissions.accessibility
         || !permissions.input_monitoring
-}
-
-pub(crate) fn toggle_panel(app: &tauri::AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        let visible = window.is_visible().unwrap_or(false);
-        if visible {
-            let _ = window.hide();
-            return;
-        }
-
-        let _ = window
-            .as_ref()
-            .window()
-            .move_window(Position::TrayBottomCenter);
-        let _ = window.show();
-        let _ = window.set_focus();
-    }
 }
 
 pub(crate) fn set_tray_busy(app: &tauri::AppHandle, busy: bool) {

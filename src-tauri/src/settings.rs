@@ -51,7 +51,7 @@ impl Settings {
     }
 
     pub fn normalize(&mut self) {
-        if !matches!(self.model.as_str(), "tiny" | "base" | "small") {
+        if !crate::models::is_supported(&self.model) {
             self.model = "base".to_string();
         }
         self.languages.retain(|lang| is_supported_language(lang));

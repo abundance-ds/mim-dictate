@@ -54,7 +54,7 @@ impl AudioRecorder {
             .ok_or_else(|| anyhow::anyhow!("No microphone input device is available"))?;
         let config = preferred_input_config(&device)?;
         let input_sample_rate = config.sample_rate();
-        let stream_config: StreamConfig = config.clone().into();
+        let stream_config: StreamConfig = config.into();
         let channels = usize::from(stream_config.channels).max(1);
         let samples = Arc::new(Mutex::new(Vec::with_capacity(
             input_sample_rate as usize * 20,

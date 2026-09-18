@@ -5,7 +5,8 @@
 #[cfg(target_os = "macos")]
 pub struct ActivityGuard {
     process_info: objc2::rc::Retained<objc2_foundation::NSProcessInfo>,
-    activity: objc2::rc::Retained<objc2::runtime::ProtocolObject<dyn objc2::runtime::NSObjectProtocol>>,
+    activity:
+        objc2::rc::Retained<objc2::runtime::ProtocolObject<dyn objc2::runtime::NSObjectProtocol>>,
 }
 
 #[cfg(target_os = "macos")]

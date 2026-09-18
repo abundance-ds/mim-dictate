@@ -78,7 +78,7 @@ pub fn set_model(
     state: State<'_, AppState>,
     model: String,
 ) -> CommandResult<Settings> {
-    if !matches!(model.as_str(), "tiny" | "base" | "small") {
+    if !models::is_supported(&model) {
         return Err("Unknown model".to_string());
     }
     {
@@ -372,7 +372,10 @@ async fn stop_recording_impl(app: AppHandle) -> CommandResult<StopResult> {
     }
 
     let paste = if settings.auto_paste {
-        Some(paste::paste_text(&app, &transcript.text, paste_target_pid).map_err(to_command_error)?)
+        Some(
+            paste::paste_text(&app, &transcript.text, paste_target_pid)
+                .map_err(to_command_error)?,
+        )
     } else {
         None
     };
@@ -486,13 +489,14 @@ pub fn request_keyboard_permission() -> CommandResult<crate::permissions::Permis
 }
 
 #[tauri::command]
-pub fn request_input_monitoring_permission() -> CommandResult<crate::permissions::PermissionStatus> {
+pub fn request_input_monitoring_permission() -> CommandResult<crate::permissions::PermissionStatus>
+{
     Ok(crate::permissions::request_input_monitoring())
 }
 
 #[tauri::command]
 pub fn restart_app(app: AppHandle) {
-    app.restart();
+    app.request_restart();
 }
 
 #[tauri::command]

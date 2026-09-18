@@ -11,6 +11,7 @@ use crate::models;
 pub struct Transcriber {
     loaded_model: Option<String>,
     context: Option<WhisperContext>,
+    shutting_down: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -22,6 +23,12 @@ pub struct TranscriptResult {
 }
 
 impl Transcriber {
+    pub fn shutdown(&mut self) {
+        self.shutting_down = true;
+        self.context = None;
+        self.loaded_model = None;
+    }
+
     pub fn transcribe(
         &mut self,
         app_dir: &Path,
@@ -68,6 +75,9 @@ impl Transcriber {
     }
 
     fn ensure_model(&mut self, app_dir: &Path, model: &str) -> anyhow::Result<()> {
+        if self.shutting_down {
+            anyhow::bail!("Transcriber is shutting down");
+        }
         if self.loaded_model.as_deref() == Some(model) && self.context.is_some() {
             return Ok(());
         }
@@ -82,6 +92,10 @@ impl Transcriber {
         let path = path
             .to_str()
             .ok_or_else(|| anyhow::anyhow!("Model path is not valid UTF-8"))?;
+        // Release the previous model before allocating another one, especially
+        // when switching to Turbo on machines with limited unified memory.
+        self.context = None;
+        self.loaded_model = None;
         let context = WhisperContext::new_with_params(path, WhisperContextParameters::default())?;
         self.context = Some(context);
         self.loaded_model = Some(model.to_string());
@@ -138,4 +152,46 @@ fn normalize_languages(languages: &[String]) -> Vec<String> {
     out.sort();
     out.dedup();
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Run in its own test process so Metal's global destructors are exercised.
+    #[test]
+    #[ignore = "requires MIM_TEST_APP_DIR with a downloaded model; exercises native GPU cleanup"]
+    fn native_model_transcribes_and_shuts_down() {
+        use std::sync::{Mutex, OnceLock};
+
+        // Mimic AppState references retained by background workers at exit.
+        // Rust statics are not dropped: shutdown must free the native context.
+        static TRANSCRIBER: OnceLock<Mutex<Transcriber>> = OnceLock::new();
+        let app_dir = std::env::var("MIM_TEST_APP_DIR").expect("set MIM_TEST_APP_DIR");
+        let model = std::env::var("MIM_TEST_MODEL").unwrap_or_else(|_| "base".to_string());
+        let mut transcriber = TRANSCRIBER
+            .get_or_init(|| Mutex::new(Transcriber::default()))
+            .lock()
+            .unwrap();
+        let result = transcriber.transcribe(
+            Path::new(&app_dir),
+            &model,
+            &["en".to_string()],
+            &vec![0.0; 16_000],
+        );
+        transcriber.shutdown();
+        assert_eq!(result.unwrap().model, model);
+        assert!(transcriber.context.is_none());
+    }
+
+    #[test]
+    fn shutdown_prevents_queued_transcriptions_from_reloading_gpu_resources() {
+        let mut transcriber = Transcriber::default();
+        transcriber.shutdown();
+        transcriber.shutdown();
+        let error = transcriber
+            .transcribe(Path::new("/nonexistent"), "base", &[], &[])
+            .unwrap_err();
+        assert_eq!(error.to_string(), "Transcriber is shutting down");
+    }
 }

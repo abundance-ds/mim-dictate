@@ -109,7 +109,9 @@ impl Database {
              WHERE created_at >= ?1",
         )?;
         let (total_words, total_duration_ms, total_speech_ms, session_count): (i64, i64, i64, i64) =
-            stmt.query_row(params![cutoff], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)))?;
+            stmt.query_row(params![cutoff], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+            })?;
 
         let avg_wpm = if total_speech_ms > 0 {
             (total_words as f64 / total_speech_ms as f64) * 60_000.0
@@ -153,12 +155,18 @@ impl Database {
                 ON transcriptions(created_at DESC);",
         )?;
         // migrate: add columns to existing tables that lack them
-        if conn.prepare("SELECT word_count FROM transcriptions LIMIT 0").is_err() {
+        if conn
+            .prepare("SELECT word_count FROM transcriptions LIMIT 0")
+            .is_err()
+        {
             conn.execute_batch(
                 "ALTER TABLE transcriptions ADD COLUMN word_count INTEGER NOT NULL DEFAULT 0;",
             )?;
         }
-        if conn.prepare("SELECT speech_duration_ms FROM transcriptions LIMIT 0").is_err() {
+        if conn
+            .prepare("SELECT speech_duration_ms FROM transcriptions LIMIT 0")
+            .is_err()
+        {
             conn.execute_batch(
                 "ALTER TABLE transcriptions ADD COLUMN speech_duration_ms INTEGER NOT NULL DEFAULT 0;",
             )?;

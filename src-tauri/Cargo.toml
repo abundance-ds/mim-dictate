@@ -1,6 +1,6 @@
 [package]
 name = "mim-dictate"
-version = "0.1.4"
+version = "0.1.5"
 description = "Local macOS speech-to-text menu bar app"
 authors = ["shoulders-ai"]
 edition = "2021"
@@ -29,11 +29,10 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 rusqlite = { version = "0.37", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tauri = { version = "2", features = ["tray-icon", "image-png", "macos-private-api"] }
+tauri = { version = "~2.11", features = ["tray-icon", "image-png", "macos-private-api"] }
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-opener = "2"
-tauri-plugin-positioner = { version = "2", features = ["tray-icon"] }
 tokio = { version = "1", features = ["fs", "io-util", "time"] }
 whisper-rs = "0.16.0"
 

@@ -345,7 +345,7 @@ button:focus-visible, select:focus-visible, input:focus-visible {
 }
 .dropdown-menu[hidden] { display: none; }
 
-.model-menu { right: auto; left: -40px; }
+.model-menu { right: 0; width: 270px; max-height: 220px; overflow-y: auto; }
 .language-menu { width: 146px; }
 
 .dropdown-list { display: grid; gap: 2px; }

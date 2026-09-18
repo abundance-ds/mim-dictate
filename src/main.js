@@ -591,7 +591,7 @@ function renderModelOptions() {
     const btn = document.createElement("button");
     btn.type = "button"; btn.role = "option";
     btn.dataset.model = model.id;
-    btn.textContent = `${model.id} · ${model.installed ? "ready" : "download"}`;
+    btn.textContent = `${model.name} · ${formatBytes(model.min_bytes)}${model.installed ? " · ready" : ""}`;
     btn.addEventListener("click", () => selectModel(model.id));
     el.modelList.append(btn);
   }
@@ -601,7 +601,7 @@ function renderModelOptions() {
 function updateModelButton() {
   if (!state.settings) return;
   const m = state.models.find((x) => x.id === state.settings.model);
-  el.modelValue.textContent = m ? `${m.id} · ${m.installed ? "ready" : "download"}` : state.settings.model;
+  el.modelValue.textContent = m ? `${m.name} · ${m.installed ? "ready" : "download"}` : state.settings.model;
   for (const opt of el.modelList.querySelectorAll("button")) {
     opt.setAttribute("aria-selected", opt.dataset.model === state.settings.model ? "true" : "false");
   }

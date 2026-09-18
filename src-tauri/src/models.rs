@@ -36,21 +36,49 @@ const MODELS: &[ModelDef] = &[
         id: "tiny",
         name: "Tiny",
         file: "ggml-tiny.bin",
-        min_bytes: 75_000_000,
+        min_bytes: 77_691_713,
     },
     ModelDef {
         id: "base",
         name: "Base",
         file: "ggml-base.bin",
-        min_bytes: 145_000_000,
+        min_bytes: 147_951_465,
     },
     ModelDef {
         id: "small",
         name: "Small",
         file: "ggml-small.bin",
-        min_bytes: 480_000_000,
+        min_bytes: 487_601_967,
+    },
+    ModelDef {
+        id: "tiny-q5_1",
+        name: "Tiny Q5",
+        file: "ggml-tiny-q5_1.bin",
+        min_bytes: 32_152_673,
+    },
+    ModelDef {
+        id: "base-q5_1",
+        name: "Base Q5",
+        file: "ggml-base-q5_1.bin",
+        min_bytes: 59_707_625,
+    },
+    ModelDef {
+        id: "small-q5_1",
+        name: "Small Q5",
+        file: "ggml-small-q5_1.bin",
+        min_bytes: 190_085_487,
+    },
+    ModelDef {
+        id: "large-v3-turbo-q5_0",
+        name: "Large v3 Turbo Q5",
+        file: "ggml-large-v3-turbo-q5_0.bin",
+        min_bytes: 574_041_195,
     },
 ];
+
+pub fn is_supported(id: &str) -> bool {
+    MODELS.iter().any(|model| model.id == id)
+}
 
 pub fn model_path(app_dir: &Path, id: &str) -> anyhow::Result<PathBuf> {
     let def = model_def(id)?;
@@ -184,6 +212,32 @@ mod tests {
         for model in MODELS {
             assert!(model.min_bytes > 1_000_000);
             assert!(model.file.ends_with(".bin"));
+        }
+    }
+
+    #[test]
+    fn quantized_models_have_distinct_paths_and_survive_settings_normalization() {
+        let root = Path::new("/tmp/mim-dictate-test");
+        for id in [
+            "tiny-q5_1",
+            "base-q5_1",
+            "small-q5_1",
+            "large-v3-turbo-q5_0",
+        ] {
+            assert!(is_supported(id));
+            assert_eq!(
+                model_path(root, id).unwrap(),
+                root.join("models").join(format!("ggml-{id}.bin"))
+            );
+            let mut settings = crate::settings::Settings {
+                model: id.to_string(),
+                ..Default::default()
+            };
+            settings.normalize();
+            let saved = serde_json::to_string(&settings).unwrap();
+            let mut reloaded: crate::settings::Settings = serde_json::from_str(&saved).unwrap();
+            reloaded.normalize();
+            assert_eq!(reloaded.model, id);
         }
     }
 }
