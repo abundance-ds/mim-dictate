@@ -495,6 +495,11 @@ pub fn request_input_monitoring_permission() -> CommandResult<crate::permissions
 }
 
 #[tauri::command]
+pub fn quit_app(app: AppHandle) {
+    app.exit(0);
+}
+
+#[tauri::command]
 pub fn restart_app(app: AppHandle) {
     app.request_restart();
 }

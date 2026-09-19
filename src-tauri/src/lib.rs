@@ -108,6 +108,7 @@ pub fn run() {
             commands::request_keyboard_permission,
             commands::request_input_monitoring_permission,
             commands::restart_app,
+            commands::quit_app,
             commands::open_permission_settings,
         ])
         .build(tauri::generate_context!())

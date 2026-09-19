@@ -56,7 +56,7 @@ Open Settings → Model, select a model, then download it when prompted. Base re
 
 ## Troubleshooting
 
-Click the menu bar icon to toggle the panel, or the Dock icon to show it. Closing the panel hides it; use the menu bar's Quit item to exit. The panel uses the current tray/display position with a fallback when displays change. Whisper's GPU resources are released before quitting or restarting.
+Click the menu bar icon to toggle the panel, or the Dock icon to show it. Closing the panel hides it; click **Quit** in the panel header to exit, including during setup. You can also right-click the menu bar icon and choose Quit. The panel uses the current tray/display position with a fallback when displays change. Whisper's GPU resources are released before quitting or restarting.
 
 If recording works but text is not pasted into the current cursor position, keyboard access is the likely missing permission. Open Mim Dictate, click Keyboard access, then confirm Mim Dictate is enabled in macOS System Settings under:
 

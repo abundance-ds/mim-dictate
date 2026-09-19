@@ -1,6 +1,6 @@
 [package]
 name = "mim-dictate"
-version = "0.1.5"
+version = "0.1.6"
 description = "Local macOS speech-to-text menu bar app"
 authors = ["shoulders-ai"]
 edition = "2021"

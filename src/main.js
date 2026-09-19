@@ -39,6 +39,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   el.statusLabel = document.querySelector("#status-label");
   el.statusDetail = document.querySelector("#status-detail");
   el.recordToggle = document.querySelector("#record-toggle");
+  el.quitButton = document.querySelector("#quit-button");
   el.setupSection = document.querySelector("#setup-section");
   el.setupDetail = document.querySelector("#setup-detail");
   el.setupContinue = document.querySelector("#setup-continue");
@@ -100,6 +101,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   el.settingsToggle.addEventListener("click", toggleSettings);
   el.recordToggle.addEventListener("click", toggleRecording);
+  el.quitButton.addEventListener("click", quitApp);
   el.setupContinue.addEventListener("click", runNextSetupTask);
   el.setupTasks.model.row.addEventListener("click", () => runSetupTask("model"));
   el.setupTasks.microphone.row.addEventListener("click", () => runSetupTask("microphone"));
@@ -143,6 +145,16 @@ window.addEventListener("DOMContentLoaded", async () => {
 });
 
 // ── Boot & settings collapse ─────────────────────────────────
+
+async function quitApp() {
+  el.quitButton.disabled = true;
+  try {
+    await invoke("quit_app");
+  } catch (error) {
+    el.quitButton.disabled = false;
+    setStatus("idle", String(error));
+  }
+}
 
 async function boot() {
   state.recording = await invoke("is_recording");
